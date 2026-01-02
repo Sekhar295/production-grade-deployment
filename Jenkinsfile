@@ -26,7 +26,7 @@ pipeline {
                     
                     withCredentials([usernamePassword(
                         credentialsId: 'dockerpass',
-                        usernamevariable: 'DOCKER_USER',
+                        usernameVariable: 'DOCKER_USER',
                         passwordVariable: 'DOCKER_PASS'
                     )]) {
                         sh """
@@ -44,7 +44,7 @@ pipeline {
                 script {
                     withCredentials([usernamePassword(
                         credentialsId: 'githubpass',
-                        usernameVaariable: 'GIT_USERNAME',
+                        usernameVariable: 'GIT_USERNAME',
                         passwordVariable: 'GIT_TOKEN'
                     )]) {
                         sh """
@@ -56,7 +56,7 @@ pipeline {
                         git reset --hard origin/main
                         sed -i "s|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" k8s/deployment.yml
                         git add k8s/deployment.yml
-                        git diff --cached --quiet || gt commit -m "Updated Image to ${IMAGE_TAG}"
+                        git diff --cached --quiet || git commit -m "Updated Image to ${IMAGE_TAG}"
                         git push https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/Sekhar295/production-grade-deployment.git main
                         """
                     }
