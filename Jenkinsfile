@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     options {
-        disableConcurrentBuilds
+        disableConcurrentBuilds()
     }
     
     environment {
@@ -20,26 +20,28 @@ pipeline {
         stage ("Build and push Image"){
             when { branch 'main' }
             steps {
-                def IMAGE_TAG = "build-${BUILD_NUMBER}"
-                
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerpass',
-                    usernamevariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh """
-                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                    docker push ${IMAGE_NAME}:${IMAGE_TAG}
-                    """
+                script {
+                    
+                    env.IMAGE_TAG = "build-${BUILD_NUMBER}"
+                    
+                    withCredentials([usernamePassword(
+                        credentialsId: 'dockerpass',
+                        usernamevariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+                        sh """
+                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                        """
+                    }
                 }
-                env.IMAGE_TAG = IMAGE_TAG
             }
         }
         stage ("Update K8S Manifest"){
             when { branch 'main' }
             steps {
-                scripts {
+                script {
                     withCredentials([usernamePassword(
                         credentialsId: 'githubpass',
                         usernameVaariable: 'GIT_USERNAME',
@@ -52,7 +54,7 @@ pipeline {
                         git fetch origin 
                         git checkout main
                         git reset --hard origin/main
-                        sed -i 's|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|' k8s/deployment.yml
+                        sed -i "s|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" k8s/deployment.yml
                         git add k8s/deployment.yml
                         git diff --cached --quiet || gt commit -m "Updated Image to ${IMAGE_TAG}"
                         git push https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/Sekhar295/production-grade-deployment.git main
